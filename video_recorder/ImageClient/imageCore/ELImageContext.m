@@ -22,8 +22,7 @@
 static void *openGLESContextQueueKey;
 
 
-- (id)init;
-{
+- (id)init {
     if (!(self = [super init]))
     {
         return nil;
@@ -44,8 +43,7 @@ static void *openGLESContextQueueKey;
 }
 
 //单例的处理图像的Context
-+ (ELImageContext *)sharedImageProcessingContext;
-{
++ (ELImageContext *)sharedImageProcessingContext {
     static dispatch_once_t pred;
     static ELImageContext *sharedImageProcessingContext = nil;
     
@@ -55,18 +53,15 @@ static void *openGLESContextQueueKey;
     return sharedImageProcessingContext;
 }
 
-+ (dispatch_queue_t)sharedContextQueue;
-{
++ (dispatch_queue_t)sharedContextQueue {
     return [[self sharedImageProcessingContext] contextQueue];
 }
 
-+ (void)useImageProcessingContext;
-{
++ (void)useImageProcessingContext {
     [[ELImageContext sharedImageProcessingContext] useAsCurrentContext];
 }
 
-- (void)useAsCurrentContext;
-{
+- (void)useAsCurrentContext {
     EAGLContext *imageProcessingContext = [self context];
     if ([EAGLContext currentContext] != imageProcessingContext)
     {
@@ -74,13 +69,11 @@ static void *openGLESContextQueueKey;
     }
 }
 
-- (void)useSharegroup:(EAGLSharegroup *)sharegroup;
-{
+- (void)useSharegroup:(EAGLSharegroup *)sharegroup {
     _sharegroup = sharegroup;
 }
 
-- (EAGLContext *)createContext;
-{
+- (EAGLContext *)createContext {
     EAGLContext *context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2 sharegroup:_sharegroup];
     return context;
 }
@@ -88,8 +81,7 @@ static void *openGLESContextQueueKey;
 #pragma mark -
 #pragma mark Manage fast texture upload
 
-+ (BOOL)supportsFastTextureUpload;
-{
++ (BOOL)supportsFastTextureUpload {
 #if TARGET_IPHONE_SIMULATOR
     return NO;
 #else
@@ -105,8 +97,7 @@ static void *openGLESContextQueueKey;
 #pragma mark -
 #pragma mark Accessors
 
-- (EAGLContext *)context;
-{
+- (EAGLContext *)context {
     if (_context == nil)
     {
         _context = [self createContext];
@@ -119,8 +110,7 @@ static void *openGLESContextQueueKey;
     return _context;
 }
 
-- (CVOpenGLESTextureCacheRef)coreVideoTextureCache;
-{
+- (CVOpenGLESTextureCacheRef)coreVideoTextureCache {
     if (_coreVideoTextureCache == NULL)
     {
 #if defined(__IPHONE_6_0)
@@ -139,12 +129,11 @@ static void *openGLESContextQueueKey;
     return _coreVideoTextureCache;
 }
 
--(void) dealloc;
-{
-    if (_coreVideoTextureCache)
-    {
+- (void)dealloc {
+    if (_coreVideoTextureCache) {
         CFRelease(_coreVideoTextureCache);
         NSLog(@"Realese _coreVideoTextureCache...");
     }
 }
+
 @end

@@ -123,6 +123,7 @@
             NSAssert(NO, @"Error at CVPixelBufferCreate %d", err);
         }
         
+        //准备输入纹理，要将 CVPixelBuffer 中的 YUV 数据关联到两个纹理 ID 上
         err = CVOpenGLESTextureCacheCreateTextureFromImage (kCFAllocatorDefault, coreVideoTextureCache, renderTarget,
                                                             NULL, // texture attributes
                                                             GL_TEXTURE_2D,
@@ -161,6 +162,7 @@
 - (GLubyte *)byteBuffer;
 {
 #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+    //需要在使用 CVPixelBuffer 这块内存区域之前，先锁定这个对象，使用完毕之后解锁
     CVPixelBufferLockBaseAddress(renderTarget, 0);
     GLubyte * bufferBytes = CVPixelBufferGetBaseAddress(renderTarget);
     CVPixelBufferUnlockBaseAddress(renderTarget, 0);

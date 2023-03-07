@@ -18,9 +18,9 @@ void runAsyncOnContextQueue(ELImageContext *context, void (^block)(void));
 @interface ELImageOutput : NSObject
 {
     
-    ELImageTextureFrame *outputTexture;
+    ELImageTextureFrame *outputTexture; //渲染目标的纹理对象
     
-    NSMutableArray *targets;
+    NSMutableArray *targets; //后级节点列表
 }
 
 

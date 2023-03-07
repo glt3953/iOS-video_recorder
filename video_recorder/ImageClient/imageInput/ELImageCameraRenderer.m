@@ -27,18 +27,21 @@ NSString *const vertexShaderString = SHADER_STRING
 
 NSString *const fragmentShaderString = SHADER_STRING
 (
- varying highp vec2 textureCoordinate;
+ varying highp vec2 textureCoordinate; //纹理坐标
  
+ //从 CVPixelBuffer 里面上传到显存中的纹理对象
  uniform sampler2D luminanceTexture;
  uniform sampler2D chrominanceTexture;
- uniform mediump mat3 colorConversionMatrix;
+ uniform mediump mat3 colorConversionMatrix; //根据像素格式，以及是否为 FullRange 选择的变换矩阵
  
  void main()
  {
      mediump vec3 yuv;
      lowp vec3 rgb;
      
+    //由于 luminanceTexture 使用的是 GL_LUMINANCE 格式上传上来的纹理，所以这里使用 texture2D 函数拿出像素点之后，访问元素 r 就可以拿到 Y 通道的值了。
      yuv.x = texture2D(luminanceTexture, textureCoordinate).r;
+    //UV 通道使用的是 GL_LUMINANCE_ALPHA 格式，通过 texture2D 取出像素点之后，访问元素 r 得到 U 的值，访问元素 a 得到 V 的值。但为什么 UV 值要减去 0.5（换算为 0-255 就是减去 127）？这是因为 UV 是色彩分量，当整张图片是黑白的时候，UV 分量是默认值 127，所以这里要先减去 127，然后再转换成 RGB，否则会出现色彩不匹配的错误。
      yuv.yz = texture2D(chrominanceTexture, textureCoordinate).ra - vec2(0.5, 0.5);
      rgb = colorConversionMatrix * yuv;
      
@@ -115,6 +118,7 @@ NSString *const YUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRING
 //    CMTime currentTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
     
     [program use];
+    //由于 CVPixelBuffer 内部数据是 YUV 数据格式的，所以可分配以下两个纹理对象分别存储 Y 和 UV 的数据
     CVOpenGLESTextureRef luminanceTextureRef = NULL;
     CVOpenGLESTextureRef chrominanceTextureRef = NULL;
     
@@ -129,12 +133,13 @@ NSString *const YUVVideoRangeConversionForLAFragmentShaderString = SHADER_STRING
         NSLog(@"Error at CVOpenGLESTextureCacheCreateTextureFromImage %d", err);
     }
         
+    //使用 Y 通道的数据内容创建出来的纹理对象可以通过 CVOpenGLESTextureGetName 来获取出纹理 ID
     luminanceTexture = CVOpenGLESTextureGetName(luminanceTextureRef);
     glBindTexture(GL_TEXTURE_2D, luminanceTexture);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         
-    // UV-plane
+    // UV-plane，可以把 UV 通道部分上传到 chrominanceTextureRef 里
     glActiveTexture(GL_TEXTURE5);
     err = CVOpenGLESTextureCacheCreateTextureFromImage(kCFAllocatorDefault, [[ELImageContext sharedImageProcessingContext] coreVideoTextureCache], cameraFrame, NULL, GL_TEXTURE_2D, GL_LUMINANCE_ALPHA, bufferWidth/2, bufferHeight/2, GL_LUMINANCE_ALPHA, GL_UNSIGNED_BYTE, 1, &chrominanceTextureRef);
     if (err)

@@ -18,6 +18,7 @@
 
 typedef enum { kELImageNoRotation, kELImageFlipHorizontal } ELImageRotationMode;
 
+//封装 EAGLContext 和渲染线程
 @interface ELImageContext : NSObject
 
 @property(readonly, nonatomic) dispatch_queue_t contextQueue;
@@ -45,7 +46,10 @@ typedef enum { kELImageNoRotation, kELImageFlipHorizontal } ELImageRotationMode;
 
 @protocol ELImageInput <NSObject>
 
+//执行渲染操作
 - (void)newFrameReadyAtTime:(CMTime)frameTime timimgInfo:(CMSampleTimingInfo)timimgInfo;
+
+//设置输入的纹理对象
 - (void)setInputTexture:(ELImageTextureFrame *)textureFrame;
 
 @end

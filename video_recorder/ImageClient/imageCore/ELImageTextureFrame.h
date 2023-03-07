@@ -23,6 +23,7 @@ typedef struct GPUTextureFrameOptions {
     GLenum type;
 } GPUTextureFrameOptions;
 
+//将纹理对象和帧缓存对象的创建、绑定、销毁等操作，以面向对象的方式封装起来
 @interface ELImageTextureFrame : NSObject
 
 - (id)initWithSize:(CGSize)framebufferSize;

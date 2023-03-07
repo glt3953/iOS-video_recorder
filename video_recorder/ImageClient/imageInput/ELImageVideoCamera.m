@@ -61,7 +61,7 @@ GLfloat *colorConversion709 = colorConversion709Default;
 @property (nonatomic, strong) AVCaptureConnection* connection;
 // 输入设备
 @property (nonatomic, strong) AVCaptureDeviceInput *captureInput;
-// 视频输出
+// 视频输出，处理摄像头采集到的数据
 @property (nonatomic, strong) AVCaptureVideoDataOutput *captureOutput;
 // 是否应该启用OpenGL渲染，在 willResignActive 时，置为NO, didBecomeActive 时置为YES
 @property (nonatomic, assign) BOOL shouldEnableOpenGL;
@@ -169,6 +169,7 @@ GLfloat *colorConversion709 = colorConversion709Default;
         [_captureSession setSessionPreset:[NSString stringWithString:kCommonCaptureSessionPreset]];
     }
     
+    //取出 captureOutput 里面的 AVCaptureConnection
     self.connection = [self.captureOutput connectionWithMediaType:AVMediaTypeVideo];
     [self setRelativeVideoOrientation];
     [self setFrameRate];
@@ -380,14 +381,14 @@ GLfloat *colorConversion709 = colorConversion709Default;
 }
 
 #pragma mark - AVCaptureVideoDataOutputSampleBufferDelegate
-
--(void) captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection
-{
+- (void)captureOutput:(AVCaptureOutput*)captureOutput didOutputSampleBuffer:(CMSampleBufferRef)sampleBuffer fromConnection:(AVCaptureConnection*)connection {
     if (self.shouldEnableOpenGL) {
+        //要保证上一次渲染执行结束了（通过 dispatch_semaphore 的 wait 来确定）才可以执行本次渲染操作
         if (dispatch_semaphore_wait(_frameRenderingSemaphore, DISPATCH_TIME_NOW) != 0) {
             return;
         }
         
+        //执行渲染操作的时候首先要使用 CFRetain 锁定这个 sampleBuffer，因为真正使用 sampleBuffer 的地方是在 OpenGL ES 线程中，只有这里 Retain 住才能保证 sampleBuffer 不被污染，等这一次 OpenGL ES 的渲染操作结束以后，再使用 CFRelease 释放这个 sampleBuffer。最后给 semaphore 发一个 signal 指令。
         CFRetain(sampleBuffer);
         runAsyncOnVideoProcessingQueue(^{
             [self processVideoSampleBuffer:sampleBuffer];
@@ -397,37 +398,25 @@ GLfloat *colorConversion709 = colorConversion709Default;
     }
 }
 
-
-- (void)processVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer;
-{
+//真正的渲染操作，需要将 sampleBuffer 对象渲染成为一个纹理对象，然后调用后续的 targets 节点进行渲染。
+- (void)processVideoSampleBuffer:(CMSampleBufferRef)sampleBuffer {
     CVImageBufferRef cameraFrame = CMSampleBufferGetImageBuffer(sampleBuffer);
     CFTypeRef colorAttachments = CVBufferGetAttachment(cameraFrame, kCVImageBufferYCbCrMatrixKey, NULL);
-    if (colorAttachments != NULL)
-    {
-        if(CFStringCompare(colorAttachments, kCVImageBufferYCbCrMatrix_ITU_R_601_4, 0) == kCFCompareEqualTo)
-        {
-            if (isFullYUVRange)
-            {
+    if (colorAttachments != NULL) {
+        if (CFStringCompare(colorAttachments, kCVImageBufferYCbCrMatrix_ITU_R_601_4, 0) == kCFCompareEqualTo) {
+            if (isFullYUVRange) {
                 _preferredConversion = colorConversion601FullRange;
-            }
-            else
-            {
+            } else {
+                //YUVVideoRange
                 _preferredConversion = colorConversion601;
             }
-        }
-        else
-        {
+        } else {
             _preferredConversion = colorConversion709;
         }
-    }
-    else
-    {
-        if (isFullYUVRange)
-        {
+    } else {
+        if (isFullYUVRange) {
             _preferredConversion = colorConversion601FullRange;
-        }
-        else
-        {
+        } else {
             _preferredConversion = colorConversion601;
         }
     }
@@ -438,6 +427,7 @@ GLfloat *colorConversion709 = colorConversion709Default;
     CMTime currentTime = CMSampleBufferGetPresentationTimeStamp(sampleBuffer);
     CMSampleTimingInfo timimgInfo = kCMTimingInfoInvalid;
     CMSampleBufferGetSampleTimingInfo(sampleBuffer, 0, &timimgInfo);
+    //每一个真正继承这个类的节点，执行渲染过程结束之后，就会遍历 targets 里面所有的目标节点（即 ELImageInput）执行设置输出纹理对象的方法，然后执行下一个节点的渲染过程。
     for (id<ELImageInput> currentTarget in targets){
         [currentTarget setInputTexture:outputTexture];
         [currentTarget newFrameReadyAtTime:currentTime timimgInfo:timimgInfo];

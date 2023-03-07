@@ -89,11 +89,13 @@ void AudioEncoder::destroy() {
 }
 
 int AudioEncoder::alloc_audio_stream(const char * codec_name) {
+    //根据编码器名称找出对应的编码器，接着根据编码器分配出编码器上下文
 	AVCodec *codec = avcodec_find_encoder_by_name(codec_name);
 	if (!codec) {
 		LOGI("Couldn't find a valid audio codec By Codec Name %s", codec_name);
 		return -1;
 	}
+    //给编码器上下文填充以下几个属性
 	avCodecContext = avcodec_alloc_context3(codec);
 	avCodecContext->codec_type = AVMEDIA_TYPE_AUDIO;
 	avCodecContext->sample_rate = audioSampleRate;
@@ -102,7 +104,7 @@ int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 	} else {
 		avCodecContext->bit_rate = PUBLISH_BITE_RATE;
 	}
-	avCodecContext->sample_fmt = AV_SAMPLE_FMT_S16;
+	avCodecContext->sample_fmt = AV_SAMPLE_FMT_S16; //采样格式
 	LOGI("audioChannels is %d", audioChannels);
 	LOGI("AV_SAMPLE_FMT_S16 is %d", AV_SAMPLE_FMT_S16);
 	avCodecContext->channel_layout = audioChannels == 1 ? AV_CH_LAYOUT_MONO : AV_CH_LAYOUT_STEREO;
@@ -111,6 +113,7 @@ int AudioEncoder::alloc_audio_stream(const char * codec_name) {
 	LOGI("avCodecContext->channels is %d", avCodecContext->channels);
 	avCodecContext->flags |= CODEC_FLAG_GLOBAL_HEADER;
 	avCodecContext->codec_id = codec->id;
+    //打开这个编码器上下文
 	if (avcodec_open2(avCodecContext, codec, NULL) < 0) {
 		LOGI("Couldn't open codec");
 		return -2;
@@ -142,6 +145,7 @@ int AudioEncoder::alloc_avframe() {
         LOGI("Could not allocate source samples\n");
         return -1;
     }
+    //获取inputFrame 分配的 buffer 的大小
     audio_samples_size = av_samples_get_buffer_size(NULL, avCodecContext->channels, audio_nb_samples, avCodecContext->sample_fmt, 0);
 	return ret;
 }

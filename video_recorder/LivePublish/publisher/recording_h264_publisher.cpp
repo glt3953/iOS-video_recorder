@@ -137,6 +137,7 @@ int RecordingH264Publisher::write_video_frame(AVFormatContext *oc, AVStream *st)
         for (i = 0; i < tmp2; i++)
             c->extradata[8 + tmp + 3 + i] = ppsFrame[4 + i];
         
+        //将这个音频文件的 Header 部分写进去，然后记录一个标志 isWriteHeaderSuccess，使其为 true，因为后续在销毁资源的阶段，需要根据这个标志来判断是否调用 write trailer 方法写入文件尾部。
         int ret = avformat_write_header(oc, NULL);
         if (ret < 0) {
             LOGI("Error occurred when opening output file: %s\n", av_err2str(ret));

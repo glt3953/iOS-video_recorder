@@ -108,7 +108,7 @@ int RecordingPublisher::init(char *videoOutputURI,
     av_register_all();
     avformat_network_init();
     LOGI("Publish URL %s", videoOutputURI);
-    /* 2:allocate the output media context */
+    /* 2:allocate the output media context 传入输出文件格式，分配出上下文，即分配出封装格式*/
     avformat_alloc_output_context2(&oc, NULL, "flv", videoOutputURI);
     if (!oc) {
         return -1;
@@ -130,6 +130,7 @@ int RecordingPublisher::init(char *videoOutputURI,
         if (PUBLISH_INVALID_FLAG != this->publishTimeout) {
             AVIOInterruptCB int_cb = {interrupt_cb, this};
             oc->interrupt_callback = int_cb;
+            //将 AAC 的编码路径传入，相当于打开文件连接通道
             ret = avio_open2(&oc->pb, videoOutputURI, AVIO_FLAG_WRITE, &oc->interrupt_callback,
                              NULL);
             if (ret < 0) {
@@ -268,6 +269,7 @@ AVStream *RecordingPublisher::add_stream(AVFormatContext *oc, AVCodec **codec,
     if (verboseOn)
         LOGI("\n find encoder name is '%s' ", (*codec)->name);
 
+    //传入刚才的 FormatContext 构建出一个音频流（AVStream）
     st = avformat_new_stream(oc, *codec);
     if (!st) {
         LOGI("Could not allocate stream\n");
@@ -449,6 +451,7 @@ int RecordingPublisher::interleavedWriteFrame(AVFormatContext *s, AVPacket *pkt)
     }
     int publishSize = pkt->size;
     long startTime = platform_4_live::getCurrentTimeMills();
+    //将 pkt 写到最终的文件中去
     int ret = av_interleaved_write_frame(s, pkt);
     long writeTimeInterval = (platform_4_live::getCurrentTimeMills() - startTime);
     if(ret == 0){

@@ -329,6 +329,7 @@ static void propListener_routechange(void *                  inClientData,
     
     try {
         XThrowIfError(AUGraphDisconnectNodeInput(_graph, _IONode, 0), "graph disconnect error");
+        //给 RemoteIO 这个 AudioUnit 的 OutputElement 增加一个回调
         AURenderCallbackStruct renderCallback;
         renderCallback.inputProc = &ioUnitCallBack;
         renderCallback.inputProcRefCon = (__bridge void *)self;

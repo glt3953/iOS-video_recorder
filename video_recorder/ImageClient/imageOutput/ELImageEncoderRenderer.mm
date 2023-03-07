@@ -185,6 +185,7 @@ NSString *const videoEncodeColorSwizzlingFragmentShaderString = SHADER_STRING
             }else {
                 CVPixelBufferLockBaseAddress(pixel_buffer, 0);
                 GLubyte *pixelBufferData = (GLubyte *)CVPixelBufferGetBaseAddress(pixel_buffer);
+                //显存的数据回传回内存，将绑定的纹理对象代表的内容拷贝回 pixelBufferData 这个数组中，这个拷贝会比较耗时，并且拷贝时间会和分辨率（width\height）大小成正比。
                 glReadPixels(0, 0, _width, _height, GL_RGBA, GL_UNSIGNED_BYTE, pixelBufferData);
             }
         }
